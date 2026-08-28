@@ -1,0 +1,83 @@
+[
+  {
+    "id": "q1_attendance_easy",
+    "category": "easy",
+    "question": "What is the minimum attendance requirement for examinations?",
+    "expected_document": "Academic Regulations 2026",
+    "expected_pages": [1],
+    "expected_keywords": ["attendance", "75%", "examinations", "lectures"],
+    "is_unanswerable": false,
+    "expected_answer_mode": "grounded"
+  },
+  {
+    "id": "q2_attendance_paraphrase",
+    "category": "paraphrased",
+    "question": "How many classes do I have to attend so I don't get debarred from writing exams?",
+    "expected_document": "Academic Regulations 2026",
+    "expected_pages": [1],
+    "expected_keywords": ["75%", "attendance"],
+    "is_unanswerable": false,
+    "expected_answer_mode": "grounded"
+  },
+  {
+    "id": "q3_condonation_keywords",
+    "category": "exact_keyword",
+    "question": "What is the medical condonation policy by the Dean of Academic Affairs?",
+    "expected_document": "Academic Regulations 2026",
+    "expected_pages": [1],
+    "expected_keywords": ["condonation", "10%", "medical", "Dean"],
+    "is_unanswerable": false,
+    "expected_answer_mode": "grounded"
+  },
+  {
+    "id": "q4_graduation_cgpa",
+    "category": "easy",
+    "question": "What is the minimum CGPA required for the award of an undergraduate degree?",
+    "expected_document": "Academic Regulations 2026",
+    "expected_pages": [1],
+    "expected_keywords": ["CGPA", "5.00", "degree", "graduation"],
+    "is_unanswerable": false,
+    "expected_answer_mode": "grounded"
+  },
+  {
+    "id": "q5_unanswerable_parking",
+    "category": "unanswerable",
+    "question": "What is the annual permit fee for student car parking in Lot B?",
+    "expected_document": null,
+    "expected_pages": [],
+    "expected_keywords": [],
+    "is_unanswerable": true,
+    "expected_answer_mode": "unknown"
+  },
+  {
+    "id": "q6_unanswerable_swimming",
+    "category": "unanswerable",
+    "question": "Are the olympic swimming pool facilities open on Sunday evenings?",
+    "expected_document": null,
+    "expected_pages": [],
+    "expected_keywords": [],
+    "is_unanswerable": true,
+    "expected_answer_mode": "unknown"
+  },
+  {
+    "id": "q7_multiturn_clarification",
+    "category": "multi_turn",
+    "question": "Does this attendance rule apply to lab practicals and tutorials as well?",
+    "expected_document": "Academic Regulations 2026",
+    "expected_pages": [1],
+    "expected_keywords": ["practicals", "tutorials", "75%"],
+    "is_unanswerable": false,
+    "expected_answer_mode": "grounded"
+  },
+  {
+    "id": "q8_ambiguous_short",
+    "category": "ambiguous",
+    "question": "Attendance criteria",
+    "expected_document": "Academic Regulations 2026",
+    "expected_pages": [1],
+    "expected_keywords": ["attendance", "75%"],
+    "is_unanswerable": false,
+    "expected_answer_mode": "grounded"
+  }
+]
+

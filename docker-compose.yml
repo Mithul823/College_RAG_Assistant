@@ -1,0 +1,47 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: college-rag-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - APP_ENV=production
+      - UPLOAD_DIR=/app/data/uploads
+      - CHROMA_PERSIST_DIRECTORY=/app/data/chroma
+      - CORS_ORIGINS=["http://localhost", "http://localhost:80", "http://localhost:5173", "http://127.0.0.1", "http://127.0.0.1:80", "http://127.0.0.1:5173"]
+    volumes:
+      - ./data/uploads:/app/data/uploads
+      - ./data/chroma:/app/data/chroma
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: college-rag-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
