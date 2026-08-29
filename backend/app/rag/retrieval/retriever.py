@@ -97,6 +97,12 @@ class RAGRetriever:
 
         # 1. Embed query
         try:
+            query_embedding = self.embedding_provider.embed_query(query.strip())
+        except Exception as exc:
+            logger.warning("retrieval_embedding_failed", extra={"error": str(exc)})
+            query_embedding = []
+
+        if not query_embedding:
             return []
 
         # 2. Vector search in ChromaDB (retrieve candidate pool for hybrid reranking)
