@@ -160,7 +160,7 @@ class GeminiLLMProvider(LLMProvider):
 
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         settings = get_settings()
-        self.api_key = api_key or settings.llm_api_key
+        self.api_key = api_key or settings.gemini_api_key or settings.llm_api_key
         self.model = model or settings.llm_model or "gemini-2.0-flash"
 
     async def generate_response(

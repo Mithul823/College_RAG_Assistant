@@ -24,9 +24,11 @@ class Settings(BaseSettings):
     chroma_persist_directory: str = "./data/chroma"
     chroma_collection_name: str = "college_documents"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
-    llm_provider: str = "CHANGE_ME"
-    llm_model: str = "CHANGE_ME"
+    llm_provider: str = "gemini"
+    llm_model: str = "gemini-2.0-flash"
     llm_api_key: str = "CHANGE_ME"
+    gemini_api_key: str = ""
+    openai_api_key: str = ""
     jwt_secret_key: str = "CHANGE_ME"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60

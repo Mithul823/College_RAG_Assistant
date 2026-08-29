@@ -39,7 +39,7 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
 
     def __init__(self, api_key: str | None = None) -> None:
         settings = get_settings()
-        self.api_key = api_key or settings.llm_api_key
+        self.api_key = api_key or settings.gemini_api_key or settings.llm_api_key
         self.models_to_try = [
             "models/gemini-embedding-001",
             "models/text-embedding-004",
@@ -148,6 +148,7 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
 def get_embedding_provider() -> EmbeddingProvider:
     """Return configured embedding provider (defaults to Remote Gemini API for 0 MB RAM overhead on Render)."""
     settings = get_settings()
-    if settings.llm_api_key and settings.llm_api_key != "CHANGE_ME":
+    key = settings.gemini_api_key or settings.llm_api_key
+    if key and key != "CHANGE_ME":
         return GeminiEmbeddingProvider()
     return FastEmbedEmbeddingProvider()
