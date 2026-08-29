@@ -25,38 +25,67 @@ class EmbeddingProvider(ABC):
 
 
 class GeminiEmbeddingProvider(EmbeddingProvider):
-    """Zero-RAM Remote API Embedding provider using Google Gemini API (models/gemini-embedding-001)."""
+    """Zero-RAM Remote API Embedding provider using Google Gemini API with chunk batching & key sanitization."""
 
     def __init__(self, api_key: str | None = None) -> None:
         settings = get_settings()
         self.api_key = api_key or settings.llm_api_key
-        self.model = "models/gemini-embedding-001"
+        self.models_to_try = [
+            "models/gemini-embedding-001",
+            "models/text-embedding-004",
+            "models/embedding-001",
+        ]
 
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        if not texts:
+    def _embed_batch(self, batch_texts: list[str]) -> list[list[float]]:
+        if not batch_texts:
             return []
         if not self.api_key or self.api_key == "CHANGE_ME":
             raise RuntimeError("GEMINI_API_KEY / LLM_API_KEY is not configured for remote embeddings.")
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/{self.model}:batchEmbedContents?key={self.api_key}"
-        payload = {
-            "requests": [
-                {
-                    "model": self.model,
-                    "content": {"parts": [{"text": t}]}
-                }
-                for t in texts
-            ]
-        }
+        last_error = None
+        for model in self.models_to_try:
+            # Pass key as HTTP param so credentials are never leaked in raw URL strings or loggers
+            url = f"https://generativelanguage.googleapis.com/v1beta/{model}:batchEmbedContents"
+            params = {"key": self.api_key}
+            payload = {
+                "requests": [
+                    {
+                        "model": model,
+                        "content": {"parts": [{"text": t}]}
+                    }
+                    for t in batch_texts
+                ]
+            }
 
-        with httpx.Client(timeout=30.0) as client:
-            res = client.post(url, json=payload)
-            res.raise_for_status()
-            data = res.json()
-            embeddings = [e["values"] for e in data.get("embeddings", [])]
-            if len(embeddings) == len(texts):
-                return embeddings
-            raise RuntimeError(f"Unexpected embedding count returned: expected {len(texts)}, got {len(embeddings)}")
+            try:
+                with httpx.Client(timeout=30.0) as client:
+                    res = client.post(url, params=params, json=payload)
+                    if res.status_code == 200:
+                        data = res.json()
+                        embeddings = [e["values"] for e in data.get("embeddings", [])]
+                        if len(embeddings) == len(batch_texts):
+                            return embeddings
+                    last_error = f"HTTP {res.status_code}: {res.text[:150]}"
+            except Exception as exc:
+                last_error = str(exc)
+
+        # Sanitize error message to prevent leaking raw API keys to frontend
+        raise RuntimeError(f"Remote embedding request failed. Please check Gemini API key configuration. Detail: {last_error}")
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+
+        # Batch texts into chunks of 16 to prevent payload size limits and HTTP 400 Bad Request on large PDFs
+        batch_size = 16
+        all_embeddings: list[list[float]] = []
+
+        for i in range(0, len(texts), batch_size):
+            chunk_batch = texts[i : i + batch_size]
+            batch_embeddings = self._embed_batch(chunk_batch)
+            all_embeddings.extend(batch_embeddings)
+
+        return all_embeddings
 
     def embed_query(self, text: str) -> list[float]:
         if not text:
@@ -98,6 +127,7 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
 
     def __init__(self, model_name: str | None = None) -> None:
         self._provider = get_embedding_provider()
+
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return self._provider.embed_documents(texts)
 
