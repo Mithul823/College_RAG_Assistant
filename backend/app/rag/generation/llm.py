@@ -258,8 +258,9 @@ def get_llm_provider() -> LLMProvider:
     """Return configured LLM provider singleton."""
     settings = get_settings()
     provider_name = settings.llm_provider.lower().strip()
+    has_gemini_key = bool((settings.gemini_api_key or settings.llm_api_key) and (settings.gemini_api_key != "CHANGE_ME" and settings.llm_api_key != "CHANGE_ME"))
 
-    if provider_name == "gemini":
+    if provider_name == "gemini" or has_gemini_key:
         return GeminiLLMProvider()
 
     if provider_name in ("openai", "azure"):
