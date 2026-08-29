@@ -132,7 +132,7 @@ class RAGRetriever:
             if hybrid_score < effective_min_score:
                 continue
 
-            metadata = result.get("metadata", {})
+            metadata = result.get("metadata") or {}
             retrieved.append(
                 RetrievedChunk(
                     chunk_id=result.get("chunk_id", ""),

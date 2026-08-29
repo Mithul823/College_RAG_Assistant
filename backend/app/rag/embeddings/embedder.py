@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from functools import lru_cache
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -8,6 +9,15 @@ import httpx
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def sanitize_credentials(text: str) -> str:
+    """Scrub sensitive API keys, tokens, passwords, and query parameters from error strings."""
+    if not text:
+        return ""
+    text = re.sub(r"(?:key|token|api_key|password|secret)=[^&\s\"\']+", "[REDACTED]", text, flags=re.IGNORECASE)
+    text = re.sub(r"Bearer\s+[A-Za-z0-9\-\._~\+\/]+=*", "Bearer [REDACTED]", text, flags=re.IGNORECASE)
+    return text
 
 
 class EmbeddingProvider(ABC):
@@ -25,7 +35,7 @@ class EmbeddingProvider(ABC):
 
 
 class GeminiEmbeddingProvider(EmbeddingProvider):
-    """Zero-RAM Remote API Embedding provider using Google Gemini API with chunk batching & key sanitization."""
+    """Zero-RAM Remote API Embedding provider using Google Gemini API with credential protection."""
 
     def __init__(self, api_key: str | None = None) -> None:
         settings = get_settings()
@@ -40,11 +50,10 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         if not batch_texts:
             return []
         if not self.api_key or self.api_key == "CHANGE_ME":
-            raise RuntimeError("GEMINI_API_KEY / LLM_API_KEY is not configured for remote embeddings.")
+            raise RuntimeError("Gemini API key is not configured.")
 
         last_error = None
         for model in self.models_to_try:
-            # Pass key as HTTP param so credentials are never leaked in raw URL strings or loggers
             url = f"https://generativelanguage.googleapis.com/v1beta/{model}:batchEmbedContents"
             params = {"key": self.api_key}
             payload = {
@@ -65,12 +74,12 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
                         embeddings = [e["values"] for e in data.get("embeddings", [])]
                         if len(embeddings) == len(batch_texts):
                             return embeddings
-                    last_error = f"HTTP {res.status_code}: {res.text[:150]}"
+                    last_error = f"HTTP {res.status_code}"
             except Exception as exc:
-                last_error = str(exc)
+                last_error = sanitize_credentials(str(exc))
 
-        # Sanitize error message to prevent leaking raw API keys to frontend
-        raise RuntimeError(f"Remote embedding request failed. Please check Gemini API key configuration. Detail: {last_error}")
+        # Natural, secure error message with zero credential exposure
+        raise RuntimeError("Remote embedding service is unavailable. Please check your Gemini API key configuration.")
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:

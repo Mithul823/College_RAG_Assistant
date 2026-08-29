@@ -204,9 +204,11 @@ class DocumentService:
                     database.commit()
             except Exception:
                 pass
+            from app.rag.embeddings.embedder import sanitize_credentials
+            clean_error = sanitize_credentials(str(exc))
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Document processing failed: {exc}",
+                detail=f"Document processing failed: {clean_error}",
             ) from exc
 
     @staticmethod
