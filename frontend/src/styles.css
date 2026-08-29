@@ -9,167 +9,199 @@ html.light {
   color-scheme: light;
 }
 
-/* Base Body Styles */
+/* Glassmorphism Backgrounds */
 body {
   margin: 0;
-  background-color: #181513;
-  color: #f3efe6;
-  transition: background-color 0.25s ease, color 0.25s ease;
+  background-color: #0b0f19;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(30, 27, 75, 0.7) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(15, 23, 42, 0.8) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(17, 24, 39, 0.9) 0px, transparent 50%);
+  background-attachment: fixed;
+  color: #f8fafc;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 html.light body {
-  background-color: #f4f0e6;
-  color: #2c2523;
+  background-color: #f1f5f9;
+  background-image: 
+    radial-gradient(at 0% 0%, #e0e7ff 0px, transparent 50%),
+    radial-gradient(at 100% 0%, #fae8ff 0px, transparent 50%),
+    radial-gradient(at 50% 100%, #f1f5f9 0px, transparent 50%);
+  color: #0f172a;
 }
 
-/* Claymorphism Utility Classes */
+/* Glassmorphism Utility Classes (Aliased with clay-* for backwards compatibility) */
+.glass-card,
 .clay-card {
-  background: #231e1b;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   border-radius: 20px;
-  box-shadow: 6px 6px 14px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(0, 0, 0, 0.3), inset 2px 2px 4px rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+html.light .glass-card,
 html.light .clay-card {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
   border-radius: 20px;
-  box-shadow: 8px 8px 18px rgba(185, 172, 152, 0.35), inset -3px -3px 6px rgba(185, 172, 152, 0.15), inset 3px 3px 6px rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
+.glass-input,
 .clay-input {
-  background: #1c1816;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
-  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.35), inset -2px -2px 4px rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #f3efe6;
+  color: #f8fafc;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.glass-input:focus-within,
+.clay-input:focus-within {
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+}
+
+html.light .glass-input,
 html.light .clay-input {
-  background: #eee9dd;
-  border-radius: 16px;
-  box-shadow: inset 3px 3px 6px rgba(175, 160, 140, 0.3), inset -2px -2px 4px rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(175, 160, 140, 0.2);
-  color: #2c2523;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #0f172a;
 }
 
+.glass-btn-primary,
 .clay-btn-primary {
-  background: linear-gradient(135deg, #d97706, #c2410c);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.85), rgba(99, 102, 241, 0.85));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   color: #ffffff;
   border-radius: 14px;
-  box-shadow: 4px 4px 10px rgba(194, 65, 12, 0.4), inset -2px -2px 4px rgba(0, 0, 0, 0.2), inset 2px 2px 4px rgba(255, 255, 255, 0.25);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.35);
+  transition: all 0.2s ease;
 }
 
+.glass-btn-primary:hover,
 .clay-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 5px 5px 14px rgba(194, 65, 12, 0.5), inset -2px -2px 4px rgba(0, 0, 0, 0.2), inset 2px 2px 4px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
-.clay-btn-primary:active {
-  transform: translateY(1px);
-  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.3);
-}
-
-/* Light & Dark Global Palette Overrides */
+/* Light & Dark Global Glass Overrides */
 html.light .bg-slate-950 {
-  background-color: #f4f0e6 !important;
+  background-color: transparent !important;
 }
 
 html.light .bg-slate-900,
 html.light .bg-slate-900\/80,
 html.light .bg-slate-900\/60 {
-  background-color: #ffffff !important;
-  box-shadow: 6px 6px 16px rgba(185, 172, 152, 0.25), inset 2px 2px 4px rgba(255, 255, 255, 0.8) !important;
-  border-color: rgba(220, 210, 195, 0.6) !important;
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(16px) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05) !important;
 }
 
 html.light .bg-slate-950\/80,
 html.light .bg-slate-950\/40 {
-  background-color: #e9e4d7 !important;
+  background-color: rgba(241, 245, 249, 0.7) !important;
 }
 
 html.light .border-slate-800,
 html.light .border-slate-800\/80,
 html.light .border-slate-800\/50 {
-  border-color: #e2dacd !important;
+  border-color: rgba(226, 232, 240, 0.8) !important;
 }
 
 html.light .text-slate-100,
 html.light .text-slate-200,
 html.light .text-white {
-  color: #2c2523 !important;
+  color: #0f172a !important;
 }
 
 html.light .text-slate-300 {
-  color: #4a3f3b !important;
+  color: #334155 !important;
 }
 
 html.light .text-slate-400 {
-  color: #786a63 !important;
+  color: #64748b !important;
 }
 
 html.light .bg-slate-800,
 html.light .bg-slate-800\/50 {
-  background-color: #eee9dd !important;
-  color: #2c2523 !important;
+  background-color: rgba(255, 255, 255, 0.6) !important;
+  color: #0f172a !important;
 }
 
 html.light .hover\:bg-slate-800:hover {
-  background-color: #e4decb !important;
+  background-color: rgba(241, 245, 249, 0.9) !important;
 }
 
-/* User Chat Bubble - Warm Clay Terracotta */
+/* User Glass Chat Bubble */
 .bg-cyan-600 {
-  background: linear-gradient(135deg, #c2410c, #9a3412) !important;
-  box-shadow: 4px 4px 10px rgba(154, 52, 18, 0.35), inset -2px -2px 4px rgba(0, 0, 0, 0.2), inset 2px 2px 4px rgba(255, 255, 255, 0.2) !important;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(99, 102, 241, 0.9)) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.25) !important;
   border-radius: 20px !important;
 }
 
-/* Primary Accent Overrides */
+/* Primary Accents */
 .from-cyan-600.to-indigo-600,
 .from-cyan-500.to-indigo-500 {
-  background: linear-gradient(135deg, #d97706, #c2410c) !important;
+  background: linear-gradient(135deg, #0ea5e9, #6366f1) !important;
 }
 
 .text-cyan-400 {
-  color: #f59e0b !important;
+  color: #38bdf8 !important;
 }
 
 html.light .text-cyan-400 {
-  color: #d97706 !important;
+  color: #0284c7 !important;
 }
 
 .border-cyan-800\/60,
 .border-cyan-700\/60 {
-  border-color: rgba(217, 119, 6, 0.4) !important;
+  border-color: rgba(56, 189, 248, 0.3) !important;
 }
 
 .bg-cyan-950 {
-  background-color: #2a1b14 !important;
+  background-color: rgba(12, 74, 110, 0.4) !important;
 }
 
 html.light .bg-cyan-950 {
-  background-color: #fdf6e7 !important;
+  background-color: rgba(224, 242, 254, 0.8) !important;
 }
 
-/* Header & Sidebar Adjustments */
+/* Frosted Header & Sidebar */
 header {
-  border-bottom-color: rgba(255, 255, 255, 0.06) !important;
-  background-color: rgba(28, 24, 22, 0.85) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
 }
 
 html.light header {
-  background-color: rgba(244, 240, 230, 0.9) !important;
-  border-bottom-color: rgba(210, 195, 180, 0.5) !important;
+  background-color: rgba(255, 255, 255, 0.75) !important;
+  border-bottom-color: rgba(226, 232, 240, 0.8) !important;
 }
 
 aside {
-  background-color: #1c1816 !important;
-  border-right-color: rgba(255, 255, 255, 0.05) !important;
+  background-color: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(16px) !important;
+  border-right-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 html.light aside {
-  background-color: #ebe6d9 !important;
-  border-right-color: rgba(210, 195, 180, 0.5) !important;
+  background-color: rgba(248, 250, 252, 0.7) !important;
+  border-right-color: rgba(226, 232, 240, 0.8) !important;
 }
