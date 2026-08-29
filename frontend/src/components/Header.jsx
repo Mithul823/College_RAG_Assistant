@@ -51,7 +51,7 @@ export default function Header({ currentView, onToggleView }) {
         {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700 transition flex items-center justify-center text-xs font-medium"
+          className="px-3 py-1.5 rounded-xl bg-amber-950/40 hover:bg-amber-900/60 text-amber-500 hover:text-amber-300 border border-amber-800/40 transition flex items-center justify-center text-xs font-semibold shadow-inner"
           title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
         >
           {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}

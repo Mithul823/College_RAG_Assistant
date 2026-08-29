@@ -42,7 +42,7 @@ export default function ChatMessage({ message, onOpenSources, onSelectSource }) 
 
   return (
     <div className="flex justify-start mb-6">
-      <div className="max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-xs px-5 py-4 shadow-md w-full">
+      <div className="max-w-2xl clay-card rounded-2xl rounded-tl-xs px-5 py-4 w-full">
         {/* Header with status badge & latency */}
         <div className="flex items-center justify-between gap-3 mb-2.5 pb-2 border-b border-slate-800/80">
           <div className="flex items-center gap-2 flex-wrap">

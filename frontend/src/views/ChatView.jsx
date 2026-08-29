@@ -207,7 +207,7 @@ export default function ChatView({ onToggleView, currentView = 'chat' }) {
                     <button
                       key={i}
                       onClick={() => handleSendMessage(prompt)}
-                      className="p-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-cyan-700/60 text-xs text-slate-300 hover:text-slate-100 transition text-left cursor-pointer shadow-sm"
+                      className="p-3.5 rounded-2xl clay-card hover:border-amber-600/60 text-xs text-slate-300 hover:text-slate-100 transition text-left cursor-pointer"
                     >
                       💡 {prompt}
                     </button>

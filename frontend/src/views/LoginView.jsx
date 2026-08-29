@@ -37,7 +37,7 @@ export default function LoginView({ onNavigateToRegister }) {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-slate-900 border border-slate-800 py-8 px-6 shadow-2xl rounded-3xl sm:px-10">
+        <div className="clay-card py-8 px-6 sm:px-10">
           {error && (
             <div className="mb-5 p-3.5 rounded-xl bg-rose-950/70 border border-rose-800/80 text-rose-300 text-xs font-medium flex items-center gap-2">
               <span>⚠️</span>
@@ -56,7 +56,7 @@ export default function LoginView({ onNavigateToRegister }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="student@college.edu"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 placeholder-slate-400 focus:outline-hidden focus:border-cyan-500 transition"
+                className="w-full px-3.5 py-2.5 clay-input text-sm focus:outline-hidden transition"
               />
             </div>
 
@@ -70,7 +70,7 @@ export default function LoginView({ onNavigateToRegister }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 placeholder-slate-400 focus:outline-hidden focus:border-cyan-500 transition"
+                className="w-full px-3.5 py-2.5 clay-input text-sm focus:outline-hidden transition"
               />
             </div>
 
@@ -78,7 +78,7 @@ export default function LoginView({ onNavigateToRegister }) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-2.5 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold transition cursor-pointer shadow-lg shadow-cyan-950/50 disabled:opacity-50"
+                className="w-full flex justify-center py-2.5 px-4 clay-btn-primary text-sm font-semibold cursor-pointer disabled:opacity-50"
               >
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </button>

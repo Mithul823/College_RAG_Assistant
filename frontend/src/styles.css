@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color-scheme: dark;
 }
 
@@ -9,70 +9,167 @@ html.light {
   color-scheme: light;
 }
 
-/* Light Mode Overrides */
-html.light body {
-  background-color: #f8fafc;
-  color: #0f172a;
+/* Base Body Styles */
+body {
+  margin: 0;
+  background-color: #181513;
+  color: #f3efe6;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+html.light body {
+  background-color: #f4f0e6;
+  color: #2c2523;
+}
+
+/* Claymorphism Utility Classes */
+.clay-card {
+  background: #231e1b;
+  border-radius: 20px;
+  box-shadow: 6px 6px 14px rgba(0, 0, 0, 0.45), inset -2px -2px 5px rgba(0, 0, 0, 0.3), inset 2px 2px 4px rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+html.light .clay-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 8px 8px 18px rgba(185, 172, 152, 0.35), inset -3px -3px 6px rgba(185, 172, 152, 0.15), inset 3px 3px 6px rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.clay-input {
+  background: #1c1816;
+  border-radius: 16px;
+  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.35), inset -2px -2px 4px rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #f3efe6;
+}
+
+html.light .clay-input {
+  background: #eee9dd;
+  border-radius: 16px;
+  box-shadow: inset 3px 3px 6px rgba(175, 160, 140, 0.3), inset -2px -2px 4px rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(175, 160, 140, 0.2);
+  color: #2c2523;
+}
+
+.clay-btn-primary {
+  background: linear-gradient(135deg, #d97706, #c2410c);
+  color: #ffffff;
+  border-radius: 14px;
+  box-shadow: 4px 4px 10px rgba(194, 65, 12, 0.4), inset -2px -2px 4px rgba(0, 0, 0, 0.2), inset 2px 2px 4px rgba(255, 255, 255, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.clay-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 5px 5px 14px rgba(194, 65, 12, 0.5), inset -2px -2px 4px rgba(0, 0, 0, 0.2), inset 2px 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+.clay-btn-primary:active {
+  transform: translateY(1px);
+  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Light & Dark Global Palette Overrides */
 html.light .bg-slate-950 {
-  background-color: #f8fafc !important;
+  background-color: #f4f0e6 !important;
 }
 
 html.light .bg-slate-900,
 html.light .bg-slate-900\/80,
 html.light .bg-slate-900\/60 {
   background-color: #ffffff !important;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+  box-shadow: 6px 6px 16px rgba(185, 172, 152, 0.25), inset 2px 2px 4px rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(220, 210, 195, 0.6) !important;
 }
 
 html.light .bg-slate-950\/80,
 html.light .bg-slate-950\/40 {
-  background-color: #f1f5f9 !important;
+  background-color: #e9e4d7 !important;
 }
 
 html.light .border-slate-800,
 html.light .border-slate-800\/80,
 html.light .border-slate-800\/50 {
-  border-color: #e2e8f0 !important;
+  border-color: #e2dacd !important;
 }
 
 html.light .text-slate-100,
 html.light .text-slate-200,
 html.light .text-white {
-  color: #0f172a !important;
+  color: #2c2523 !important;
 }
 
 html.light .text-slate-300 {
-  color: #334155 !important;
+  color: #4a3f3b !important;
 }
 
 html.light .text-slate-400 {
-  color: #64748b !important;
+  color: #786a63 !important;
 }
 
 html.light .bg-slate-800,
 html.light .bg-slate-800\/50 {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
+  background-color: #eee9dd !important;
+  color: #2c2523 !important;
 }
 
 html.light .hover\:bg-slate-800:hover {
-  background-color: #e2e8f0 !important;
+  background-color: #e4decb !important;
 }
 
-html.light input,
-html.light textarea {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
+/* User Chat Bubble - Warm Clay Terracotta */
+.bg-cyan-600 {
+  background: linear-gradient(135deg, #c2410c, #9a3412) !important;
+  box-shadow: 4px 4px 10px rgba(154, 52, 18, 0.35), inset -2px -2px 4px rgba(0, 0, 0, 0.2), inset 2px 2px 4px rgba(255, 255, 255, 0.2) !important;
+  border-radius: 20px !important;
+}
+
+/* Primary Accent Overrides */
+.from-cyan-600.to-indigo-600,
+.from-cyan-500.to-indigo-500 {
+  background: linear-gradient(135deg, #d97706, #c2410c) !important;
+}
+
+.text-cyan-400 {
+  color: #f59e0b !important;
+}
+
+html.light .text-cyan-400 {
+  color: #d97706 !important;
+}
+
+.border-cyan-800\/60,
+.border-cyan-700\/60 {
+  border-color: rgba(217, 119, 6, 0.4) !important;
+}
+
+.bg-cyan-950 {
+  background-color: #2a1b14 !important;
+}
+
+html.light .bg-cyan-950 {
+  background-color: #fdf6e7 !important;
+}
+
+/* Header & Sidebar Adjustments */
+header {
+  border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+  background-color: rgba(28, 24, 22, 0.85) !important;
 }
 
 html.light header {
-  background-color: rgba(255, 255, 255, 0.9) !important;
+  background-color: rgba(244, 240, 230, 0.9) !important;
+  border-bottom-color: rgba(210, 195, 180, 0.5) !important;
+}
+
+aside {
+  background-color: #1c1816 !important;
+  border-right-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 html.light aside {
-  background-color: #f8fafc !important;
-  border-color: #e2e8f0 !important;
+  background-color: #ebe6d9 !important;
+  border-right-color: rgba(210, 195, 180, 0.5) !important;
 }

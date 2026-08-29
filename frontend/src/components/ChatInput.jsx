@@ -20,7 +20,7 @@ export default function ChatInput({ onSendMessage, disabled }) {
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="relative flex items-center rounded-2xl bg-slate-900 border border-slate-700/80 focus-within:border-cyan-500 shadow-xl transition">
+      <div className="relative flex items-center clay-input transition">
         <textarea
           ref={textareaRef}
           value={text}
@@ -29,14 +29,14 @@ export default function ChatInput({ onSendMessage, disabled }) {
           disabled={disabled}
           placeholder="Ask a question about college policies, courses, regulations, or fees..."
           rows={1}
-          className="w-full resize-none bg-transparent px-4 py-3.5 text-sm text-slate-100 placeholder-slate-400 focus:outline-hidden disabled:opacity-50 max-h-32"
+          className="w-full resize-none bg-transparent px-4 py-3.5 text-sm placeholder-slate-400 focus:outline-hidden disabled:opacity-50 max-h-32"
         />
 
         <div className="pr-3 flex items-center">
           <button
             type="submit"
             disabled={!text.trim() || disabled}
-            className="p-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-medium transition cursor-pointer disabled:cursor-not-allowed shadow-md shadow-cyan-950/40"
+            className="p-2.5 rounded-xl clay-btn-primary disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             {disabled ? (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">

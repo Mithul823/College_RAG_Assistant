@@ -100,7 +100,7 @@ export default function AdminDashboardView({ onNavigateToChat }) {
       <main className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
         {/* KPI Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl">
+          <div className="p-4 clay-card">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-400">Total Documents</span>
               <span className="text-base">📄</span>
@@ -113,7 +113,7 @@ export default function AdminDashboardView({ onNavigateToChat }) {
             </div>
           </div>
 
-          <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl">
+          <div className="p-4 clay-card">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-400">Indexed Chunks</span>
               <span className="text-base">🧩</span>
@@ -126,7 +126,7 @@ export default function AdminDashboardView({ onNavigateToChat }) {
             </div>
           </div>
 
-          <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl">
+          <div className="p-4 clay-card">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-400">Student Conversations</span>
               <span className="text-base">💬</span>
