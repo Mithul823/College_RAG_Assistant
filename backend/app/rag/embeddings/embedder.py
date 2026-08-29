@@ -132,6 +132,45 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         return results[0] if results else []
 
 
+class HuggingFaceEmbeddingProvider(EmbeddingProvider):
+    """Zero-RAM Remote API Embedding provider using Hugging Face Inference API."""
+
+    def __init__(self, token: str | None = None, model_name: str | None = None) -> None:
+        settings = get_settings()
+        self.token = token or settings.active_hf_token
+        self.model_name = model_name or "sentence-transformers/all-MiniLM-L6-v2"
+        self.url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{self.model_name}"
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        headers = {}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+
+        batch_size = 16
+        all_embeddings: list[list[float]] = []
+
+        for i in range(0, len(texts), batch_size):
+            chunk_batch = texts[i : i + batch_size]
+            with httpx.Client(timeout=30.0) as client:
+                res = client.post(self.url, headers=headers, json={"inputs": chunk_batch})
+                if res.status_code == 200:
+                    data = res.json()
+                    if isinstance(data, list):
+                        all_embeddings.extend(data)
+                else:
+                    raise RuntimeError(f"HuggingFace Inference API request failed ({res.status_code}). Please check HF_TOKEN on Render.")
+
+        return all_embeddings
+
+    def embed_query(self, text: str) -> list[float]:
+        if not text:
+            return []
+        results = self.embed_documents([text])
+        return results[0] if results else []
+
+
 class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
     """Legacy SentenceTransformer provider alias."""
 
@@ -147,10 +186,14 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
 
 @lru_cache
 def get_embedding_provider() -> EmbeddingProvider:
-    """Return configured embedding provider (FastEmbed for tests, Gemini API for 0 MB RAM overhead on Render)."""
+    """Return configured embedding provider (FastEmbed for tests, Hugging Face / Gemini for 0 MB RAM overhead)."""
     settings = get_settings()
     if os.getenv("PYTEST_CURRENT_TEST") or settings.app_env == "testing":
         return FastEmbedEmbeddingProvider()
+
+    hf_token = settings.active_hf_token
+    if hf_token:
+        return HuggingFaceEmbeddingProvider(token=hf_token)
 
     key = settings.active_api_key
     if key:

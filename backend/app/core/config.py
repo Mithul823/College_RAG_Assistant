@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     llm_api_key: str = "CHANGE_ME"
     gemini_api_key: str = ""
     openai_api_key: str = ""
+    hf_token: str = ""
+    hf_api_key: str = ""
+    huggingface_api_key: str = ""
     jwt_secret_key: str = "CHANGE_ME"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
@@ -54,6 +57,21 @@ class Settings(BaseSettings):
             os.getenv("GEMINI_API_KEY", ""),
             os.getenv("LLM_API_KEY", ""),
             os.getenv("GOOGLE_API_KEY", ""),
+        ]:
+            if candidate and str(candidate).strip() not in ("CHANGE_ME", "", "none", "null", "undefined"):
+                return str(candidate).strip()
+        return ""
+
+    @property
+    def active_hf_token(self) -> str:
+        import os
+        for candidate in [
+            self.hf_token,
+            self.hf_api_key,
+            self.huggingface_api_key,
+            os.getenv("HF_TOKEN", ""),
+            os.getenv("HF_API_KEY", ""),
+            os.getenv("HUGGINGFACE_API_KEY", ""),
         ]:
             if candidate and str(candidate).strip() not in ("CHANGE_ME", "", "none", "null", "undefined"):
                 return str(candidate).strip()
