@@ -17,6 +17,20 @@ from app.rag.ingestion.chunker import ProcessedChunk
 logger = logging.getLogger(__name__)
 
 
+from chromadb import EmbeddingFunction, Documents, Embeddings
+
+
+class NullEmbeddingFunction(EmbeddingFunction[Documents]):
+    def name(self) -> str:
+        return "null_embedding_function"
+
+    def __call__(self, input: Documents) -> Embeddings:
+        return [[] for _ in input]
+
+
+null_ef = NullEmbeddingFunction()
+
+
 class ChromaVectorStore:
     """ChromaDB persistent vector store implementation."""
 
@@ -43,10 +57,24 @@ class ChromaVectorStore:
             path=self.persist_directory,
             settings=chromadb.config.Settings(anonymized_telemetry=False),
         )
-        self.collection: Collection = self.client.get_or_create_collection(
-            name=self.collection_name,
-            metadata={"hnsw:space": "cosine"},
-        )
+        try:
+            self.collection: Collection = self.client.get_or_create_collection(
+                name=self.collection_name,
+                embedding_function=null_ef,
+                metadata={"hnsw:space": "cosine"},
+            )
+        except Exception:
+            try:
+                self.collection: Collection = self.client.get_collection(
+                    name=self.collection_name,
+                )
+            except Exception:
+                self.client.delete_collection(name=self.collection_name)
+                self.collection: Collection = self.client.get_or_create_collection(
+                    name=self.collection_name,
+                    embedding_function=null_ef,
+                    metadata={"hnsw:space": "cosine"},
+                )
 
     def reset(self) -> None:
         """Clear collection records safely."""
@@ -56,6 +84,7 @@ class ChromaVectorStore:
             pass
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name,
+            embedding_function=null_ef,
             metadata={"hnsw:space": "cosine"},
         )
 
