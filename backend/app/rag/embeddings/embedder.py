@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import lru_cache
 import logging
-import os
 from typing import Any
 
 from app.core.config import get_settings
@@ -23,8 +22,36 @@ class EmbeddingProvider(ABC):
         pass
 
 
+class FastEmbedEmbeddingProvider(EmbeddingProvider):
+    """Ultra-lightweight embedding provider using FastEmbed ONNX runtime (<50MB RAM footprint)."""
+
+    def __init__(self, model_name: str | None = None) -> None:
+        self.model_name = model_name or "BAAI/bge-small-en-v1.5"
+        self._model = None
+
+    @property
+    def model(self) -> Any:
+        if self._model is None:
+            logger.info("loading_fastembed_onnx_model", extra={"model_name": self.model_name})
+            from fastembed import TextEmbedding
+            self._model = TextEmbedding(model_name=self.model_name)
+        return self._model
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        embeddings = list(self.model.embed(texts))
+        return [e.tolist() for e in embeddings]
+
+    def embed_query(self, text: str) -> list[float]:
+        if not text:
+            return []
+        embeddings = list(self.model.embed([text]))
+        return embeddings[0].tolist()
+
+
 class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
-    """Embedding provider using Sentence Transformers with lazy-loading and low RAM footprint."""
+    """Fallback embedding provider using SentenceTransformers."""
 
     def __init__(self, model_name: str | None = None) -> None:
         settings = get_settings()
@@ -34,17 +61,6 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
     @property
     def model(self) -> Any:
         if self._model is None:
-            # Enforce single-threaded execution to stay within Render 512MB RAM limits
-            os.environ["OMP_NUM_THREADS"] = "1"
-            os.environ["MKL_NUM_THREADS"] = "1"
-            os.environ["OPENBLAS_NUM_THREADS"] = "1"
-            try:
-                import torch
-                torch.set_num_threads(1)
-            except Exception:
-                pass
-
-            logger.info("loading_embedding_model", extra={"model_name": self.model_name})
             from sentence_transformers import SentenceTransformer
             self._model = SentenceTransformer(self.model_name)
         return self._model
@@ -64,6 +80,9 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
 
 @lru_cache
 def get_embedding_provider() -> EmbeddingProvider:
-    """Return a singleton instance of the configured embedding provider."""
-    settings = get_settings()
-    return SentenceTransformerEmbeddingProvider(model_name=settings.embedding_model)
+    """Return a singleton instance of FastEmbed ONNX embedding provider for low RAM footprint."""
+    try:
+        return FastEmbedEmbeddingProvider()
+    except Exception as e:
+        logger.warning("fastembed_fallback_to_sentence_transformers", extra={"error": str(e)})
+        return SentenceTransformerEmbeddingProvider()
