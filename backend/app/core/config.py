@@ -40,7 +40,16 @@ class Settings(BaseSettings):
     @classmethod
     def parse_cors_origins(cls, value: object) -> object:
         if isinstance(value, str):
-            return [origin.strip() for origin in value.split(",") if origin.strip()]
+            value_str = value.strip()
+            if value_str.startswith("[") and value_str.endswith("]"):
+                try:
+                    import json
+                    parsed = json.loads(value_str)
+                    if isinstance(parsed, list):
+                        return [str(o).strip() for o in parsed if str(o).strip()]
+                except Exception:
+                    pass
+            return [origin.strip() for origin in value_str.split(",") if origin.strip()]
         return value
 
     @field_validator("database_url", mode="before")
