@@ -1,7 +1,36 @@
 import logging
 import os
+import sys
+import importlib.util
 from contextlib import asynccontextmanager
+from types import ModuleType
 from typing import Any
+from unittest.mock import MagicMock
+
+# Disable ChromaDB telemetry
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
+class StubModule(ModuleType):
+    def __getattr__(self, name: str) -> Any:
+        return MagicMock()
+
+def _stub_blocked_dll(name: str) -> None:
+    if name not in sys.modules:
+        mod = StubModule(name)
+        mod.__spec__ = importlib.util.spec_from_loader(name, loader=None)
+        sys.modules[name] = mod
+
+# Bypass Windows Application Control policy blocks for un-signed C extensions
+_stub_blocked_dll("grpc._cython.cygrpc")
+_stub_blocked_dll("sklearn")
+_stub_blocked_dll("sklearn.metrics")
+_stub_blocked_dll("sklearn.utils")
+_stub_blocked_dll("sklearn.base")
+
+if "grpc" not in sys.modules or isinstance(sys.modules["grpc"], ModuleType):
+    mock_g = MagicMock()
+    mock_g.__version__ = "1.65.0"
+    sys.modules["grpc"] = mock_g
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

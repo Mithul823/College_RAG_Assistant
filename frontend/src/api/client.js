@@ -1,6 +1,9 @@
 const getApiBaseUrl = () => {
-  const envUrl = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1').trim().replace(/\/+$/, '');
-  return envUrl.endsWith('/api/v1') ? envUrl : `${envUrl}/api/v1`;
+  if (import.meta.env.VITE_API_URL) {
+    const envUrl = import.meta.env.VITE_API_URL.trim().replace(/\/+$/, '');
+    return envUrl.endsWith('/api/v1') ? envUrl : `${envUrl}/api/v1`;
+  }
+  return '/api/v1';
 };
 
 const API_BASE_URL = getApiBaseUrl();

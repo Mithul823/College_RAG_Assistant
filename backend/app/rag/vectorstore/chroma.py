@@ -1,8 +1,12 @@
 from functools import lru_cache
 import logging
+import os
 from pathlib import Path
 from typing import Any
 from uuid import UUID
+
+# Disable ChromaDB anonymized telemetry to prevent blocked DLL gRPC imports
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
 
 import chromadb
 from chromadb.api.models.Collection import Collection
@@ -35,7 +39,10 @@ class ChromaVectorStore:
                 "collection_name": self.collection_name,
             },
         )
-        self.client = chromadb.PersistentClient(path=self.persist_directory)
+        self.client = chromadb.PersistentClient(
+            path=self.persist_directory,
+            settings=chromadb.config.Settings(anonymized_telemetry=False),
+        )
         self.collection: Collection = self.client.get_or_create_collection(
             name=self.collection_name,
             metadata={"hnsw:space": "cosine"},
