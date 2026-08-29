@@ -77,24 +77,16 @@ class ChromaVectorStore:
                 )
 
     def reset(self) -> None:
-        """Clear collection records safely."""
+        """Clear collection records and dimension constraints safely."""
         try:
-            results = self.collection.get(include=[])
-            if results and results.get("ids"):
-                self.collection.delete(ids=results["ids"])
+            self.client.delete_collection(name=self.collection_name)
         except Exception:
-            try:
-                self.client.delete_collection(name=self.collection_name)
-            except Exception:
-                pass
-            try:
-                self.collection = self.client.get_or_create_collection(
-                    name=self.collection_name,
-                    embedding_function=null_ef,
-                    metadata={"hnsw:space": "cosine"},
-                )
-            except Exception:
-                self.collection = self.client.get_collection(name=self.collection_name)
+            pass
+        self.collection: Collection = self.client.get_or_create_collection(
+            name=self.collection_name,
+            embedding_function=null_ef,
+            metadata={"hnsw:space": "cosine"},
+        )
 
     @staticmethod
     def _sanitize_metadata(metadata: dict[str, Any]) -> dict[str, str | int | float | bool]:
@@ -120,12 +112,26 @@ class ChromaVectorStore:
         documents = [chunk.text for chunk in chunks]
         metadatas = [self._sanitize_metadata(chunk.metadata) for chunk in chunks]
 
-        self.collection.upsert(
-            ids=ids,
-            embeddings=embeddings,
-            documents=documents,
-            metadatas=metadatas,
-        )
+        try:
+            self.collection.upsert(
+                ids=ids,
+                embeddings=embeddings,
+                documents=documents,
+                metadatas=metadatas,
+            )
+        except Exception as exc:
+            if "dimension" in str(exc).lower():
+                logger.info("chroma_dimension_mismatch_resetting_collection")
+                self.reset()
+                self.collection.upsert(
+                    ids=ids,
+                    embeddings=embeddings,
+                    documents=documents,
+                    metadatas=metadatas,
+                )
+            else:
+                raise
+
         logger.info(
             "vectors_inserted",
             extra={"collection": self.collection_name, "count": len(chunks)},
