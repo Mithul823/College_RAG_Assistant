@@ -25,40 +25,38 @@ class EmbeddingProvider(ABC):
 
 
 class GeminiEmbeddingProvider(EmbeddingProvider):
-    """Zero-RAM Remote API Embedding provider using Google Gemini API."""
+    """Zero-RAM Remote API Embedding provider using Google Gemini API (models/gemini-embedding-001)."""
 
     def __init__(self, api_key: str | None = None) -> None:
         settings = get_settings()
         self.api_key = api_key or settings.llm_api_key
-        self.model = "models/text-embedding-004"
+        self.model = "models/gemini-embedding-001"
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
         if not self.api_key or self.api_key == "CHANGE_ME":
-            logger.info("gemini_api_key_not_set_using_fastembed_fallback")
-            return FastEmbedEmbeddingProvider().embed_documents(texts)
+            raise RuntimeError("GEMINI_API_KEY / LLM_API_KEY is not configured for remote embeddings.")
 
         url = f"https://generativelanguage.googleapis.com/v1beta/{self.model}:batchEmbedContents?key={self.api_key}"
         payload = {
             "requests": [
-                {"model": self.model, "content": {"parts": [{"text": t}]}}
+                {
+                    "model": self.model,
+                    "content": {"parts": [{"text": t}]}
+                }
                 for t in texts
             ]
         }
 
-        try:
-            with httpx.Client(timeout=30.0) as client:
-                res = client.post(url, json=payload)
-                res.raise_for_status()
-                data = res.json()
-                embeddings = [e["values"] for e in data.get("embeddings", [])]
-                if len(embeddings) == len(texts):
-                    return embeddings
-        except Exception as exc:
-            logger.warning("gemini_remote_embedding_failed_fallback_to_fastembed", extra={"error": str(exc)})
-
-        return FastEmbedEmbeddingProvider().embed_documents(texts)
+        with httpx.Client(timeout=30.0) as client:
+            res = client.post(url, json=payload)
+            res.raise_for_status()
+            data = res.json()
+            embeddings = [e["values"] for e in data.get("embeddings", [])]
+            if len(embeddings) == len(texts):
+                return embeddings
+            raise RuntimeError(f"Unexpected embedding count returned: expected {len(texts)}, got {len(embeddings)}")
 
     def embed_query(self, text: str) -> list[float]:
         if not text:
@@ -96,10 +94,10 @@ class FastEmbedEmbeddingProvider(EmbeddingProvider):
 
 
 class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
-    """Legacy SentenceTransformer provider alias pointing to FastEmbed for zero-RAM overhead."""
+    """Legacy SentenceTransformer provider alias."""
 
     def __init__(self, model_name: str | None = None) -> None:
-        self._provider = FastEmbedEmbeddingProvider(model_name=model_name)
+        self._provider = GeminiEmbeddingProvider()
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return self._provider.embed_documents(texts)
@@ -110,13 +108,8 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
 
 @lru_cache
 def get_embedding_provider() -> EmbeddingProvider:
-    """Return configured embedding provider (defaults to Remote API Gemini embedding in production for 0 MB RAM overhead)."""
+    """Return configured embedding provider (defaults to Remote Gemini API for 0 MB RAM overhead on Render)."""
     settings = get_settings()
-    if settings.llm_provider.lower().strip() == "gemini" and settings.llm_api_key and settings.llm_api_key != "CHANGE_ME":
+    if settings.llm_api_key and settings.llm_api_key != "CHANGE_ME":
         return GeminiEmbeddingProvider()
-
-    try:
-        return FastEmbedEmbeddingProvider()
-    except Exception as e:
-        logger.warning("fastembed_fallback_to_gemini", extra={"error": str(e)})
-        return GeminiEmbeddingProvider()
+    return FastEmbedEmbeddingProvider()
