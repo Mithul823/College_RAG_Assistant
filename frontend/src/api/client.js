@@ -21,7 +21,7 @@ class ApiClient {
     }
   }
 
-  static async request(endpoint, options = {}) {
+  static async request(endpoint, options = {}, retries = 2) {
     const token = this.getToken();
     const isFormData = options.body instanceof FormData;
 
@@ -33,46 +33,55 @@ class ApiClient {
 
     const url = `${API_BASE_URL}${endpoint}`;
 
-    try {
-      // 60-second timeout to allow Render Free Tier cold starts to complete
-      const response = await fetch(url, {
-        signal: options.signal || (typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(60000) : undefined),
-        ...options,
-        headers,
-      });
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(url, {
+          signal: options.signal || (typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(60000) : undefined),
+          ...options,
+          headers,
+        });
 
-      if (response.status === 401) {
-        this.setToken(null);
-      }
+        if (response.status === 401) {
+          this.setToken(null);
+        }
 
-      let data;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        data = await response.text();
-      }
+        let data;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          data = await response.text();
+        }
 
-      if (!response.ok) {
-        const errorMsg =
-          (data && data.detail) ||
-          (data && data.message) ||
-          `Request failed with status ${response.status}`;
-        const error = new Error(errorMsg);
-        error.status = response.status;
-        error.data = data;
-        throw error;
-      }
+        if (!response.ok) {
+          if ((response.status === 502 || response.status === 503) && attempt < retries) {
+            await new Promise((r) => setTimeout(r, 4000));
+            continue;
+          }
+          const errorMsg =
+            (data && data.detail) ||
+            (data && data.message) ||
+            `Request failed with status ${response.status}`;
+          const error = new Error(errorMsg);
+          error.status = response.status;
+          error.data = data;
+          throw error;
+        }
 
-      return data;
-    } catch (err) {
-      if (err.name === 'AbortError' || err.name === 'TimeoutError' || err.message?.includes('timed out')) {
-        throw new Error('Connection timed out. Render backend may be waking up from sleep; please try again in 10-15 seconds.');
+        return data;
+      } catch (err) {
+        if (attempt < retries && (err.name === 'AbortError' || err.name === 'TimeoutError' || (err instanceof TypeError && (err.message === 'Failed to fetch' || err.message?.includes('fetch'))))) {
+          await new Promise((r) => setTimeout(r, 4000));
+          continue;
+        }
+        if (err.name === 'AbortError' || err.name === 'TimeoutError' || err.message?.includes('timed out')) {
+          throw new Error('Connection timed out. Render backend may be waking up from sleep; please try again in 10-15 seconds.');
+        }
+        if (err instanceof TypeError && (err.message === 'Failed to fetch' || err.message?.includes('fetch'))) {
+          throw new Error('Unable to connect to backend server. The server may be waking up from sleep. Please wait 10-15 seconds and try again.');
+        }
+        throw err;
       }
-      if (err instanceof TypeError && (err.message === 'Failed to fetch' || err.message?.includes('fetch'))) {
-        throw new Error('Unable to connect to backend server. The server may be waking up from sleep. Please wait 10-15 seconds and try again.');
-      }
-      throw err;
     }
   }
 
