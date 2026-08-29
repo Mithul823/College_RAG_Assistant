@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from functools import lru_cache
 import logging
+import os
 from typing import Any
-
-from sentence_transformers import SentenceTransformer
 
 from app.core.config import get_settings
 
@@ -25,13 +24,30 @@ class EmbeddingProvider(ABC):
 
 
 class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
-    """Embedding provider using Sentence Transformers (local inference)."""
+    """Embedding provider using Sentence Transformers with lazy-loading and low RAM footprint."""
 
     def __init__(self, model_name: str | None = None) -> None:
         settings = get_settings()
         self.model_name = model_name or settings.embedding_model
-        logger.info("loading_embedding_model", extra={"model_name": self.model_name})
-        self.model = SentenceTransformer(self.model_name)
+        self._model = None
+
+    @property
+    def model(self) -> Any:
+        if self._model is None:
+            # Enforce single-threaded execution to stay within Render 512MB RAM limits
+            os.environ["OMP_NUM_THREADS"] = "1"
+            os.environ["MKL_NUM_THREADS"] = "1"
+            os.environ["OPENBLAS_NUM_THREADS"] = "1"
+            try:
+                import torch
+                torch.set_num_threads(1)
+            except Exception:
+                pass
+
+            logger.info("loading_embedding_model", extra={"model_name": self.model_name})
+            from sentence_transformers import SentenceTransformer
+            self._model = SentenceTransformer(self.model_name)
+        return self._model
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:
@@ -51,4 +67,3 @@ def get_embedding_provider() -> EmbeddingProvider:
     """Return a singleton instance of the configured embedding provider."""
     settings = get_settings()
     return SentenceTransformerEmbeddingProvider(model_name=settings.embedding_model)
-
