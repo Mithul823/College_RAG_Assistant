@@ -64,34 +64,48 @@ async def lifespan(application: FastAPI):
             db = SessionLocal()
             try:
                 chunks = db.scalars(select(DocumentChunk)).all()
-                if chunks and store.collection.count() < len(chunks):
+                if chunks:
                     embedder = get_embedding_provider()
-                    processed = [
-                        ProcessedChunk(
-                            id=c.id,
-                            document_id=c.document_id,
-                            chunk_index=c.chunk_index,
-                            page_number=c.page_number,
-                            section=c.section,
-                            text=c.text,
-                            token_count=c.token_count,
-                            metadata={
-                                "document_id": str(c.document_id),
-                                "chunk_id": str(c.id),
-                                "chunk_index": c.chunk_index,
-                                "document_name": c.document_name or "Document",
-                                "page_number": c.page_number,
-                                "section": c.section or "",
-                                "department": c.department or "",
-                                "academic_year": c.academic_year or "",
-                                "semester": c.semester or "",
-                            },
-                        )
-                        for c in chunks
-                    ]
-                    texts = [c.text for c in chunks]
-                    embeddings = embedder.embed_documents(texts)
-                    store.add_chunks(chunks=processed, embeddings=embeddings)
+                    need_reindex = False
+                    if store.collection.count() != len(chunks):
+                        need_reindex = True
+                    else:
+                        try:
+                            # Verify dimension compatibility
+                            test_emb = embedder.embed_query("test")
+                            test_res = store.collection.query(query_embeddings=[test_emb], n_results=1)
+                        except Exception:
+                            need_reindex = True
+
+                    if need_reindex:
+                        logging.getLogger(__name__).info("reindexing_chroma_vector_store", extra={"chunks": len(chunks)})
+                        store.reset()
+                        processed = [
+                            ProcessedChunk(
+                                id=c.id,
+                                document_id=c.document_id,
+                                chunk_index=c.chunk_index,
+                                page_number=c.page_number,
+                                section=c.section,
+                                text=c.text,
+                                token_count=c.token_count,
+                                metadata={
+                                    "document_id": str(c.document_id),
+                                    "chunk_id": str(c.id),
+                                    "chunk_index": c.chunk_index,
+                                    "document_name": c.document_name or "Document",
+                                    "page_number": c.page_number,
+                                    "section": c.section or "",
+                                    "department": c.department or "",
+                                    "academic_year": c.academic_year or "",
+                                    "semester": c.semester or "",
+                                },
+                            )
+                            for c in chunks
+                        ]
+                        texts = [c.text for c in chunks]
+                        embeddings = embedder.embed_documents(texts)
+                        store.add_chunks(chunks=processed, embeddings=embeddings)
             finally:
                 db.close()
         except Exception as exc:

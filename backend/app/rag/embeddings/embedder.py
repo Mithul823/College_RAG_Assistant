@@ -97,8 +97,7 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
     """Legacy SentenceTransformer provider alias."""
 
     def __init__(self, model_name: str | None = None) -> None:
-        self._provider = GeminiEmbeddingProvider()
-
+        self._provider = get_embedding_provider()
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return self._provider.embed_documents(texts)
 

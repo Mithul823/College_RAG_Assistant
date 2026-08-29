@@ -79,14 +79,22 @@ class ChromaVectorStore:
     def reset(self) -> None:
         """Clear collection records safely."""
         try:
-            self.client.delete_collection(name=self.collection_name)
+            results = self.collection.get(include=[])
+            if results and results.get("ids"):
+                self.collection.delete(ids=results["ids"])
         except Exception:
-            pass
-        self.collection = self.client.get_or_create_collection(
-            name=self.collection_name,
-            embedding_function=null_ef,
-            metadata={"hnsw:space": "cosine"},
-        )
+            try:
+                self.client.delete_collection(name=self.collection_name)
+            except Exception:
+                pass
+            try:
+                self.collection = self.client.get_or_create_collection(
+                    name=self.collection_name,
+                    embedding_function=null_ef,
+                    metadata={"hnsw:space": "cosine"},
+                )
+            except Exception:
+                self.collection = self.client.get_collection(name=self.collection_name)
 
     @staticmethod
     def _sanitize_metadata(metadata: dict[str, Any]) -> dict[str, str | int | float | bool]:
