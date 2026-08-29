@@ -72,11 +72,11 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         self.api_key = api_key or settings.active_api_key
         self.model = "models/gemini-embedding-001"
 
-    def _embed_batch(self, batch_texts: list[str]) -> list[list[float]]:
+    def _embed_batch(self, batch_texts: list[str]) -> list[list[float]] | None:
         if not batch_texts:
             return []
         if not self.api_key or self.api_key == "CHANGE_ME":
-            raise RuntimeError("GEMINI_API_KEY is not configured on Render. Please set GEMINI_API_KEY in Render Environment Variables.")
+            return None
 
         url = f"https://generativelanguage.googleapis.com/v1beta/{self.model}:batchEmbedContents"
         params = {"key": self.api_key}
@@ -105,27 +105,46 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
                         if len(embeddings) == len(batch_texts):
                             return embeddings
                     elif res.status_code == 429:
-                        time.sleep(1.5 * (attempt + 1))
+                        last_error = "HTTP 429 Rate Limit Exceeded (Google Gemini API free tier quota limit reached)."
+                        time.sleep(2.0 * (attempt + 1))
                         continue
                     last_error = f"HTTP {res.status_code}: {res.text[:150]}"
             except Exception as exc:
                 last_error = sanitize_credentials(str(exc))
 
-        raise RuntimeError(f"Remote Gemini Embedding API request failed ({last_error}). Please verify your GEMINI_API_KEY on Render.")
+        logger.warning("gemini_embedding_batch_failed", extra={"error": last_error})
+        return None
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
 
-        batch_size = 16
+        batch_size = 8
         all_embeddings: list[list[float]] = []
+        remote_failed = False
 
         for i in range(0, len(texts), batch_size):
+            if i > 0:
+                time.sleep(1.0)  # Inter-batch delay to stay under Gemini 15 RPM limits
+
             chunk_batch = texts[i : i + batch_size]
             batch_embeddings = self._embed_batch(chunk_batch)
-            all_embeddings.extend(batch_embeddings)
+            if batch_embeddings is not None:
+                all_embeddings.extend(batch_embeddings)
+            else:
+                remote_failed = True
+                break
 
-        return all_embeddings
+        if not remote_failed and len(all_embeddings) == len(texts):
+            return all_embeddings
+
+        # If Gemini API hit rate limits or failed, check if HF_TOKEN is available
+        settings = get_settings()
+        if settings.active_hf_token:
+            logger.info("gemini_api_rate_limited_falling_back_to_hf_api")
+            return HuggingFaceEmbeddingProvider(token=settings.active_hf_token).embed_documents(texts)
+
+        raise RuntimeError("Remote Gemini Embedding API rate limit reached (HTTP 429). Please wait 1 minute and try again, or add HF_TOKEN to Render Environment Variables.")
 
     def embed_query(self, text: str) -> list[float]:
         if not text:
@@ -184,10 +203,6 @@ class HuggingFaceEmbeddingProvider(EmbeddingProvider):
                     last_error = sanitize_credentials(str(exc))
 
             if not batch_success:
-                settings = get_settings()
-                if settings.active_api_key:
-                    logger.warning("hf_inference_api_failed_falling_back_to_gemini", extra={"error": last_error})
-                    return GeminiEmbeddingProvider(api_key=settings.active_api_key).embed_documents(texts)
                 raise RuntimeError(f"HuggingFace Inference API request failed: {last_error}")
 
         return all_embeddings
@@ -219,12 +234,12 @@ def get_embedding_provider() -> EmbeddingProvider:
     if os.getenv("PYTEST_CURRENT_TEST") or settings.app_env == "testing":
         return FastEmbedEmbeddingProvider()
 
-    key = settings.active_api_key
-    if key:
-        return GeminiEmbeddingProvider(api_key=key)
-
     hf_token = settings.active_hf_token
     if hf_token:
         return HuggingFaceEmbeddingProvider(token=hf_token)
+
+    key = settings.active_api_key
+    if key:
+        return GeminiEmbeddingProvider(api_key=key)
 
     return GeminiEmbeddingProvider()
