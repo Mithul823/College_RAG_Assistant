@@ -65,18 +65,24 @@ class FastEmbedEmbeddingProvider(EmbeddingProvider):
 
 
 class GeminiEmbeddingProvider(EmbeddingProvider):
-    """Zero-RAM Remote API Embedding provider using Google Gemini API with rate-limit retry & credential protection."""
+    """Zero-RAM Remote API Embedding provider using Google Gemini API with seamless local fallback."""
 
     def __init__(self, api_key: str | None = None) -> None:
         settings = get_settings()
         self.api_key = api_key or settings.gemini_api_key or settings.llm_api_key
         self.model = "models/gemini-embedding-001"
+        self._fallback_provider: FastEmbedEmbeddingProvider | None = None
 
-    def _embed_batch(self, batch_texts: list[str]) -> list[list[float]]:
+    def _get_fallback(self) -> FastEmbedEmbeddingProvider:
+        if self._fallback_provider is None:
+            self._fallback_provider = FastEmbedEmbeddingProvider()
+        return self._fallback_provider
+
+    def _embed_batch(self, batch_texts: list[str]) -> list[list[float]] | None:
         if not batch_texts:
             return []
         if not self.api_key or self.api_key == "CHANGE_ME":
-            raise RuntimeError("Gemini API key is not configured.")
+            return None
 
         url = f"https://generativelanguage.googleapis.com/v1beta/{self.model}:batchEmbedContents"
         params = {"key": self.api_key}
@@ -91,8 +97,6 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         }
 
         max_retries = 3
-        last_error = None
-
         for attempt in range(max_retries):
             try:
                 with httpx.Client(timeout=30.0) as client:
@@ -105,11 +109,10 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
                     elif res.status_code == 429:
                         time.sleep(1.0 * (attempt + 1))
                         continue
-                    last_error = f"HTTP {res.status_code}"
             except Exception as exc:
-                last_error = sanitize_credentials(str(exc))
+                logger.warning("gemini_batch_embed_attempt_failed", extra={"error": sanitize_credentials(str(exc))})
 
-        raise RuntimeError("Remote embedding service is unavailable. Please check your Gemini API key configuration.")
+        return None
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:
@@ -117,13 +120,22 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
 
         batch_size = 16
         all_embeddings: list[list[float]] = []
+        remote_failed = False
 
         for i in range(0, len(texts), batch_size):
             chunk_batch = texts[i : i + batch_size]
             batch_embeddings = self._embed_batch(chunk_batch)
-            all_embeddings.extend(batch_embeddings)
+            if batch_embeddings is not None:
+                all_embeddings.extend(batch_embeddings)
+            else:
+                remote_failed = True
+                break
 
-        return all_embeddings
+        if not remote_failed and len(all_embeddings) == len(texts):
+            return all_embeddings
+
+        logger.warning("remote_gemini_embedding_failed_falling_back_to_fastembed")
+        return self._get_fallback().embed_documents(texts)
 
     def embed_query(self, text: str) -> list[float]:
         if not text:
@@ -147,7 +159,7 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
 
 @lru_cache
 def get_embedding_provider() -> EmbeddingProvider:
-    """Return configured embedding provider (FastEmbed for tests, Gemini API for zero-RAM production)."""
+    """Return configured embedding provider (FastEmbed for tests, Gemini API with fallback for production)."""
     settings = get_settings()
     if os.getenv("PYTEST_CURRENT_TEST") or settings.app_env == "testing":
         return FastEmbedEmbeddingProvider()
