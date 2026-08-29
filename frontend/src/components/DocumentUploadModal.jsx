@@ -21,7 +21,8 @@ export default function DocumentUploadModal({ isOpen, onClose, onUploadSuccess }
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.type !== 'application/pdf' && !selectedFile.name.endsWith('.pdf')) {
+      const isPdf = selectedFile.name.toLowerCase().endsWith('.pdf') || (selectedFile.type && selectedFile.type.includes('pdf'));
+      if (!isPdf) {
         setError('Only PDF documents are supported.');
         return;
       }
@@ -44,7 +45,8 @@ export default function DocumentUploadModal({ isOpen, onClose, onUploadSuccess }
     setIsDragging(false);
     const droppedFile = e.dataTransfer.files?.[0];
     if (droppedFile) {
-      if (droppedFile.type !== 'application/pdf' && !droppedFile.name.endsWith('.pdf')) {
+      const isPdf = droppedFile.name.toLowerCase().endsWith('.pdf') || (droppedFile.type && droppedFile.type.includes('pdf'));
+      if (!isPdf) {
         setError('Only PDF documents are supported.');
         return;
       }

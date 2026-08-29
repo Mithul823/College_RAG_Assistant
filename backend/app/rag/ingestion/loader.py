@@ -80,7 +80,10 @@ class PDFLoader:
 
             pages: list[dict[str, Any]] = []
             for index, page in enumerate(reader.pages):
-                page_text = page.extract_text() or ""
+                try:
+                    page_text = page.extract_text() or ""
+                except Exception:
+                    page_text = ""
                 pages.append({"page_number": index + 1, "text": page_text})
 
             if not pages:

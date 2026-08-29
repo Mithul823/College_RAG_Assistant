@@ -57,24 +57,17 @@ class ChromaVectorStore:
             path=self.persist_directory,
             settings=chromadb.config.Settings(anonymized_telemetry=False),
         )
+    @property
+    def collection(self) -> Collection:
+        """Return live collection handle dynamically."""
         try:
-            self.collection: Collection = self.client.get_or_create_collection(
+            return self.client.get_or_create_collection(
                 name=self.collection_name,
                 embedding_function=null_ef,
                 metadata={"hnsw:space": "cosine"},
             )
         except Exception:
-            try:
-                self.collection: Collection = self.client.get_collection(
-                    name=self.collection_name,
-                )
-            except Exception:
-                self.client.delete_collection(name=self.collection_name)
-                self.collection: Collection = self.client.get_or_create_collection(
-                    name=self.collection_name,
-                    embedding_function=null_ef,
-                    metadata={"hnsw:space": "cosine"},
-                )
+            return self.client.get_collection(name=self.collection_name)
 
     def reset(self) -> None:
         """Clear collection records and dimension constraints safely."""
@@ -82,11 +75,6 @@ class ChromaVectorStore:
             self.client.delete_collection(name=self.collection_name)
         except Exception:
             pass
-        self.collection: Collection = self.client.get_or_create_collection(
-            name=self.collection_name,
-            embedding_function=null_ef,
-            metadata={"hnsw:space": "cosine"},
-        )
 
     @staticmethod
     def _sanitize_metadata(metadata: dict[str, Any]) -> dict[str, str | int | float | bool]:
