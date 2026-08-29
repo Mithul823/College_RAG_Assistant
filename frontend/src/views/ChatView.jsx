@@ -93,6 +93,19 @@ export default function ChatView({ onToggleView, currentView = 'chat' }) {
     }
   };
 
+  const handleClearAllConversations = async () => {
+    if (!conversations.length) return;
+    if (!window.confirm('Are you sure you want to delete all chat history?')) return;
+    try {
+      await Promise.all(conversations.map((c) => ApiClient.deleteConversation(c.id)));
+      setConversations([]);
+      handleNewConversation();
+    } catch (err) {
+      console.error('Failed to clear chat history:', err);
+      setErrorBanner('Failed to clear chat history.');
+    }
+  };
+
   const handleSendMessage = async (text) => {
     setErrorBanner(null);
 
@@ -165,6 +178,7 @@ export default function ChatView({ onToggleView, currentView = 'chat' }) {
           onSelectConversation={handleSelectConversation}
           onNewConversation={handleNewConversation}
           onDeleteConversation={handleDeleteConversation}
+          onClearAll={handleClearAllConversations}
           isLoading={isLoadingConversations}
         />
 

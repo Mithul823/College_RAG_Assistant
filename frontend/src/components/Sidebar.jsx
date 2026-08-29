@@ -4,6 +4,7 @@ export default function Sidebar({
   onSelectConversation,
   onNewConversation,
   onDeleteConversation,
+  onClearAll,
   isLoading,
 }) {
   return (
@@ -11,7 +12,7 @@ export default function Sidebar({
       <div className="p-4 border-b border-slate-800">
         <button
           onClick={onNewConversation}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-sm transition shadow-lg shadow-cyan-950/50 cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl glass-btn-primary font-medium text-sm transition cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -21,8 +22,16 @@ export default function Sidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-1">
-        <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-          History
+        <div className="px-3 py-1.5 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <span>History</span>
+          {conversations.length > 0 && onClearAll && (
+            <button
+              onClick={onClearAll}
+              className="text-[10px] text-rose-400 hover:text-rose-300 font-medium normal-case transition hover:underline cursor-pointer"
+            >
+              Clear all
+            </button>
+          )}
         </div>
 
         {isLoading && (
@@ -41,10 +50,10 @@ export default function Sidebar({
             <div
               key={conv.id}
               onClick={() => onSelectConversation(conv.id)}
-              className={`group flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium cursor-pointer transition ${
+              className={`group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium cursor-pointer transition ${
                 isActive
-                  ? 'bg-slate-800 text-white border border-slate-700'
-                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                  ? 'bg-slate-800/80 text-white border border-slate-700/80 shadow-sm'
+                  : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
               }`}
             >
               <div className="flex items-center gap-2.5 truncate">
@@ -70,7 +79,7 @@ export default function Sidebar({
                   onDeleteConversation(conv.id);
                 }}
                 title="Delete conversation"
-                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 rounded transition"
+                className="opacity-70 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
@@ -88,4 +97,3 @@ export default function Sidebar({
     </aside>
   );
 }
-
