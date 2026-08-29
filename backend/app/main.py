@@ -32,8 +32,9 @@ if "grpc" not in sys.modules or isinstance(sys.modules["grpc"], ModuleType):
     mock_g.__version__ = "1.65.0"
     sys.modules["grpc"] = mock_g
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.router import api_router
 from app.core.config import get_settings
@@ -131,3 +132,24 @@ app.include_router(api_router)
 @app.get("/health", tags=["system"])
 def health() -> dict[str, Any]:
     return {"status": "ok", "environment": settings.app_env}
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    from fastapi import status
+    from fastapi.responses import JSONResponse
+    from app.rag.embeddings.embedder import sanitize_credentials
+
+    origin = request.headers.get("origin", "*")
+    error_msg = sanitize_credentials(str(exc)) or "An internal server error occurred."
+    logging.getLogger(__name__).error("unhandled_global_exception", extra={"error": error_msg, "path": request.url.path})
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": error_msg},
+        headers={
+            "Access-Control-Allow-Origin": origin if origin else "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Methods": "*",
+        },
+    )

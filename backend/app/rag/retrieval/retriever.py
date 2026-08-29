@@ -96,8 +96,7 @@ class RAGRetriever:
         effective_min_score = self._resolve_min_score(min_relevance_score)
 
         # 1. Embed query
-        query_embedding = self.embedding_provider.embed_query(query.strip())
-        if not query_embedding:
+        try:
             return []
 
         # 2. Vector search in ChromaDB (retrieve candidate pool for hybrid reranking)
