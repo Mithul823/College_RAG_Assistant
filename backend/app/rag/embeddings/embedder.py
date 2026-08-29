@@ -97,7 +97,7 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
 
         for attempt in range(max_retries):
             try:
-                with httpx.Client(timeout=15.0) as client:
+                with httpx.Client(timeout=20.0) as client:
                     res = client.post(url, params=params, json=payload)
                     if res.status_code == 200:
                         data = res.json()
@@ -135,13 +135,12 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
 
 
 class HuggingFaceEmbeddingProvider(EmbeddingProvider):
-    """Zero-RAM Remote API Embedding provider using Hugging Face Inference API."""
+    """Zero-RAM Remote API Embedding provider using Hugging Face Serverless Router & Inference API."""
 
     def __init__(self, token: str | None = None, model_name: str | None = None) -> None:
         settings = get_settings()
         self.token = token or settings.active_hf_token
         self.model_name = model_name or "sentence-transformers/all-MiniLM-L6-v2"
-        self.url = f"https://api-inference.huggingface.co/models/{self.model_name}"
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:
@@ -153,23 +152,43 @@ class HuggingFaceEmbeddingProvider(EmbeddingProvider):
         batch_size = 16
         all_embeddings: list[list[float]] = []
 
-        logger.info("connecting_to_hf_api", extra={"url": self.url, "doc_count": len(texts)})
+        endpoints = [
+            ("https://router.huggingface.co/hf-inference/v1/embeddings", {"model": self.model_name}),
+            (f"https://api-inference.huggingface.co/models/{self.model_name}", None),
+        ]
 
+        last_error = None
         for i in range(0, len(texts), batch_size):
             chunk_batch = texts[i : i + batch_size]
-            try:
-                with httpx.Client(timeout=20.0) as client:
-                    res = client.post(self.url, headers=headers, json={"inputs": chunk_batch})
-                    if res.status_code == 200:
-                        data = res.json()
-                        if isinstance(data, list):
-                            all_embeddings.extend(data)
-                        else:
-                            raise ValueError(f"Unexpected response format from HF API: {type(data)}")
-                    else:
-                        raise RuntimeError(f"HuggingFace API HTTP {res.status_code}: {res.text[:150]}")
-            except Exception as exc:
-                raise RuntimeError(f"HuggingFace Inference API request failed: {sanitize_credentials(str(exc))}") from exc
+            batch_success = False
+
+            for url, extra_payload in endpoints:
+                try:
+                    payload = {"inputs": chunk_batch} if extra_payload is None else {"model": self.model_name, "input": chunk_batch}
+                    logger.info("connecting_to_hf_api", extra={"url": url, "batch_size": len(chunk_batch)})
+                    with httpx.Client(timeout=20.0) as client:
+                        res = client.post(url, headers=headers, json=payload)
+                        if res.status_code == 200:
+                            data = res.json()
+                            if isinstance(data, list):
+                                all_embeddings.extend(data)
+                                batch_success = True
+                                break
+                            elif isinstance(data, dict) and "data" in data:
+                                embeddings = [item["embedding"] for item in data["data"]]
+                                all_embeddings.extend(embeddings)
+                                batch_success = True
+                                break
+                        last_error = f"HTTP {res.status_code}: {res.text[:150]}"
+                except Exception as exc:
+                    last_error = sanitize_credentials(str(exc))
+
+            if not batch_success:
+                settings = get_settings()
+                if settings.active_api_key:
+                    logger.warning("hf_inference_api_failed_falling_back_to_gemini", extra={"error": last_error})
+                    return GeminiEmbeddingProvider(api_key=settings.active_api_key).embed_documents(texts)
+                raise RuntimeError(f"HuggingFace Inference API request failed: {last_error}")
 
         return all_embeddings
 
@@ -200,13 +219,12 @@ def get_embedding_provider() -> EmbeddingProvider:
     if os.getenv("PYTEST_CURRENT_TEST") or settings.app_env == "testing":
         return FastEmbedEmbeddingProvider()
 
-    hf_token = settings.active_hf_token
-    if hf_token:
-        return HuggingFaceEmbeddingProvider(token=hf_token)
-
     key = settings.active_api_key
     if key:
         return GeminiEmbeddingProvider(api_key=key)
 
-    # Default to GeminiEmbeddingProvider (which will raise a clear error if key is missing without crashing RAM)
+    hf_token = settings.active_hf_token
+    if hf_token:
+        return HuggingFaceEmbeddingProvider(token=hf_token)
+
     return GeminiEmbeddingProvider()
