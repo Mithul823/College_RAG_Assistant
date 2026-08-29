@@ -67,7 +67,10 @@ class ApiClient {
       return data;
     } catch (err) {
       if (err.name === 'AbortError' || err.name === 'TimeoutError' || err.message?.includes('timed out')) {
-        throw new Error('Connection timed out. Render backend may be cold-starting; please try again in a moment.');
+        throw new Error('Connection timed out. Render backend may be waking up from sleep; please try again in 10-15 seconds.');
+      }
+      if (err instanceof TypeError && (err.message === 'Failed to fetch' || err.message?.includes('fetch'))) {
+        throw new Error('Unable to connect to backend server. The server may be waking up from sleep. Please wait 10-15 seconds and try again.');
       }
       throw err;
     }
