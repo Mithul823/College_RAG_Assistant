@@ -33,6 +33,7 @@ class ApiClient {
 
     const url = `${API_BASE_URL}${endpoint}`;
     const response = await fetch(url, {
+      signal: options.signal || (typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined),
       ...options,
       headers,
     });

@@ -9,27 +9,45 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Safety timeout to prevent screen from hanging on loading indefinitely
+    const timer = setTimeout(() => {
+      if (isMounted) {
+        setIsLoading(false);
+      }
+    }, 4000);
+
     async function loadUser() {
       const storedToken = ApiClient.getToken();
       if (!storedToken) {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
+        clearTimeout(timer);
         return;
       }
 
       try {
         const userData = await ApiClient.getMe();
-        setUser(userData);
+        if (isMounted) setUser(userData);
       } catch (err) {
         console.error('Failed to load authenticated user:', err);
         ApiClient.setToken(null);
-        setTokenState(null);
-        setUser(null);
+        if (isMounted) {
+          setTokenState(null);
+          setUser(null);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
+        clearTimeout(timer);
       }
     }
 
     loadUser();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   const login = async (email, password) => {
@@ -71,4 +89,3 @@ export function useAuth() {
   }
   return context;
 }
-
