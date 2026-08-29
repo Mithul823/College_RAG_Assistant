@@ -1,7 +1,9 @@
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Header({ currentView, onToggleView }) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="h-16 border-b border-slate-800 bg-slate-900/80 px-6 backdrop-blur-md flex items-center justify-between z-10">
@@ -45,6 +47,15 @@ export default function Header({ currentView, onToggleView }) {
             </button>
           </div>
         )}
+
+        {/* Theme Toggle Button */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700 transition flex items-center justify-center text-xs font-medium"
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+        >
+          {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+        </button>
 
         {user && (
           <div className="flex items-center gap-3">
