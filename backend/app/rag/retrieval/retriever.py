@@ -47,7 +47,7 @@ class RAGRetriever:
                 return float(raw_score)
         except (ValueError, TypeError):
             pass
-        return 0.35
+        return 0.10
 
     @staticmethod
     def _compute_keyword_score(query: str, text: str) -> float:
