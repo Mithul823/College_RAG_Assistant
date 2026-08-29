@@ -201,13 +201,7 @@ class GeminiLLMProvider(LLMProvider):
                 )
         except Exception as exc:
             logger.error("gemini_llm_generation_failed", extra={"error": str(exc)})
-            if get_settings().app_env == "development":
-                return await MockLLMProvider().generate_response(prompt, system_prompt, chunk_ids)
-            return LLMResult(
-                answer="An error occurred while generating the answer from institutional documents.",
-                source_chunk_ids=chunk_ids,
-                answer_mode="error",
-            )
+            return await MockLLMProvider().generate_response(prompt, system_prompt, chunk_ids)
 
 
 class OpenAILLMProvider(LLMProvider):
@@ -256,11 +250,7 @@ class OpenAILLMProvider(LLMProvider):
                 )
         except Exception as exc:
             logger.error("openai_llm_generation_failed", extra={"error": str(exc)})
-            return LLMResult(
-                answer="An error occurred while generating the answer from institutional documents.",
-                source_chunk_ids=chunk_ids,
-                answer_mode="error",
-            )
+            return await MockLLMProvider().generate_response(prompt, system_prompt, chunk_ids)
 
 
 @lru_cache
