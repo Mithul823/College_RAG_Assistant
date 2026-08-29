@@ -37,7 +37,7 @@ class EmbeddingProvider(ABC):
 
 
 class FastEmbedEmbeddingProvider(EmbeddingProvider):
-    """Ultra-lightweight local embedding provider using FastEmbed ONNX runtime."""
+    """Ultra-lightweight local embedding provider used ONLY for pytest unit testing."""
 
     def __init__(self, model_name: str | None = None) -> None:
         self.model_name = model_name or "BAAI/bge-small-en-v1.5"
@@ -46,7 +46,7 @@ class FastEmbedEmbeddingProvider(EmbeddingProvider):
     @property
     def model(self) -> Any:
         if self._model is None:
-            logger.info("loading_fastembed_onnx_model", extra={"model_name": self.model_name})
+            logger.info("loading_fastembed_onnx_model_for_test", extra={"model_name": self.model_name})
             from fastembed import TextEmbedding
             self._model = TextEmbedding(model_name=self.model_name)
         return self._model
@@ -71,18 +71,12 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         settings = get_settings()
         self.api_key = api_key or settings.active_api_key
         self.model = "models/gemini-embedding-001"
-        self._fallback: FastEmbedEmbeddingProvider | None = None
 
-    def _get_fallback(self) -> FastEmbedEmbeddingProvider:
-        if self._fallback is None:
-            self._fallback = FastEmbedEmbeddingProvider()
-        return self._fallback
-
-    def _embed_batch(self, batch_texts: list[str]) -> list[list[float]] | None:
+    def _embed_batch(self, batch_texts: list[str]) -> list[list[float]]:
         if not batch_texts:
             return []
         if not self.api_key or self.api_key == "CHANGE_ME":
-            return None
+            raise RuntimeError("GEMINI_API_KEY is not configured on Render. Please set GEMINI_API_KEY in Render Environment Variables.")
 
         url = f"https://generativelanguage.googleapis.com/v1beta/{self.model}:batchEmbedContents"
         params = {"key": self.api_key}
@@ -96,7 +90,11 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
             ]
         }
 
+        logger.info("connecting_to_gemini_api", extra={"url": url, "batch_count": len(batch_texts)})
+
         max_retries = 3
+        last_error = None
+
         for attempt in range(max_retries):
             try:
                 with httpx.Client(timeout=15.0) as client:
@@ -107,13 +105,13 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
                         if len(embeddings) == len(batch_texts):
                             return embeddings
                     elif res.status_code == 429:
-                        time.sleep(1.0 * (attempt + 1))
+                        time.sleep(1.5 * (attempt + 1))
                         continue
+                    last_error = f"HTTP {res.status_code}: {res.text[:150]}"
             except Exception as exc:
-                logger.warning("gemini_embedding_network_error", extra={"error": sanitize_credentials(str(exc))})
-                return None
+                last_error = sanitize_credentials(str(exc))
 
-        return None
+        raise RuntimeError(f"Remote Gemini Embedding API request failed ({last_error}). Please verify your GEMINI_API_KEY on Render.")
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:
@@ -121,22 +119,13 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
 
         batch_size = 16
         all_embeddings: list[list[float]] = []
-        remote_failed = False
 
         for i in range(0, len(texts), batch_size):
             chunk_batch = texts[i : i + batch_size]
             batch_embeddings = self._embed_batch(chunk_batch)
-            if batch_embeddings is not None:
-                all_embeddings.extend(batch_embeddings)
-            else:
-                remote_failed = True
-                break
+            all_embeddings.extend(batch_embeddings)
 
-        if not remote_failed and len(all_embeddings) == len(texts):
-            return all_embeddings
-
-        logger.warning("gemini_embedding_failed_using_fastembed_fallback")
-        return self._get_fallback().embed_documents(texts)
+        return all_embeddings
 
     def embed_query(self, text: str) -> list[float]:
         if not text:
@@ -153,27 +142,23 @@ class HuggingFaceEmbeddingProvider(EmbeddingProvider):
         self.token = token or settings.active_hf_token
         self.model_name = model_name or "sentence-transformers/all-MiniLM-L6-v2"
         self.url = f"https://api-inference.huggingface.co/models/{self.model_name}"
-        self._fallback: FastEmbedEmbeddingProvider | None = None
-
-    def _get_fallback(self) -> FastEmbedEmbeddingProvider:
-        if self._fallback is None:
-            self._fallback = FastEmbedEmbeddingProvider()
-        return self._fallback
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        headers = {}
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
+        if not self.token or self.token == "CHANGE_ME":
+            raise RuntimeError("HF_TOKEN is not configured on Render. Please set HF_TOKEN in Render Environment Variables.")
 
+        headers = {"Authorization": f"Bearer {self.token}"}
         batch_size = 16
         all_embeddings: list[list[float]] = []
 
-        try:
-            for i in range(0, len(texts), batch_size):
-                chunk_batch = texts[i : i + batch_size]
-                with httpx.Client(timeout=15.0) as client:
+        logger.info("connecting_to_hf_api", extra={"url": self.url, "doc_count": len(texts)})
+
+        for i in range(0, len(texts), batch_size):
+            chunk_batch = texts[i : i + batch_size]
+            try:
+                with httpx.Client(timeout=20.0) as client:
                     res = client.post(self.url, headers=headers, json={"inputs": chunk_batch})
                     if res.status_code == 200:
                         data = res.json()
@@ -183,10 +168,10 @@ class HuggingFaceEmbeddingProvider(EmbeddingProvider):
                             raise ValueError(f"Unexpected response format from HF API: {type(data)}")
                     else:
                         raise RuntimeError(f"HuggingFace API HTTP {res.status_code}: {res.text[:150]}")
-            return all_embeddings
-        except Exception as exc:
-            logger.warning("hf_embedding_failed_using_fastembed_fallback", extra={"error": sanitize_credentials(str(exc))})
-            return self._get_fallback().embed_documents(texts)
+            except Exception as exc:
+                raise RuntimeError(f"HuggingFace Inference API request failed: {sanitize_credentials(str(exc))}") from exc
+
+        return all_embeddings
 
     def embed_query(self, text: str) -> list[float]:
         if not text:
@@ -210,7 +195,7 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
 
 @lru_cache
 def get_embedding_provider() -> EmbeddingProvider:
-    """Return configured embedding provider (FastEmbed for tests, Hugging Face / Gemini for 0 MB RAM overhead)."""
+    """Return configured embedding provider (FastEmbed ONLY for pytest, Remote APIs for 0 MB RAM overhead on Render)."""
     settings = get_settings()
     if os.getenv("PYTEST_CURRENT_TEST") or settings.app_env == "testing":
         return FastEmbedEmbeddingProvider()
@@ -222,4 +207,6 @@ def get_embedding_provider() -> EmbeddingProvider:
     key = settings.active_api_key
     if key:
         return GeminiEmbeddingProvider(api_key=key)
-    return FastEmbedEmbeddingProvider()
+
+    # Default to GeminiEmbeddingProvider (which will raise a clear error if key is missing without crashing RAM)
+    return GeminiEmbeddingProvider()
