@@ -198,4 +198,4 @@ def get_embedding_provider() -> EmbeddingProvider:
     key = settings.active_api_key
     if key:
         return GeminiEmbeddingProvider(api_key=key)
-    return GeminiEmbeddingProvider()
+    return FastEmbedEmbeddingProvider()
