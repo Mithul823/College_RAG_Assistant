@@ -160,7 +160,7 @@ class GeminiLLMProvider(LLMProvider):
 
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         settings = get_settings()
-        self.api_key = api_key or settings.gemini_api_key or settings.llm_api_key
+        self.api_key = api_key or settings.active_api_key
         self.model = model or settings.llm_model or "gemini-2.0-flash"
 
     async def generate_response(
@@ -258,9 +258,9 @@ def get_llm_provider() -> LLMProvider:
     """Return configured LLM provider singleton."""
     settings = get_settings()
     provider_name = settings.llm_provider.lower().strip()
-    has_gemini_key = bool((settings.gemini_api_key or settings.llm_api_key) and (settings.gemini_api_key != "CHANGE_ME" and settings.llm_api_key != "CHANGE_ME"))
+    has_api_key = bool(settings.active_api_key)
 
-    if provider_name == "gemini" or has_gemini_key:
+    if provider_name == "gemini" or has_api_key:
         return GeminiLLMProvider()
 
     if provider_name in ("openai", "azure"):

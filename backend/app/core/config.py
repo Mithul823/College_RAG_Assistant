@@ -44,6 +44,21 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
+    @property
+    def active_api_key(self) -> str:
+        import os
+        for candidate in [
+            self.gemini_api_key,
+            self.llm_api_key,
+            self.openai_api_key,
+            os.getenv("GEMINI_API_KEY", ""),
+            os.getenv("LLM_API_KEY", ""),
+            os.getenv("GOOGLE_API_KEY", ""),
+        ]:
+            if candidate and str(candidate).strip() not in ("CHANGE_ME", "", "none", "null", "undefined"):
+                return str(candidate).strip()
+        return ""
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, value: object) -> object:

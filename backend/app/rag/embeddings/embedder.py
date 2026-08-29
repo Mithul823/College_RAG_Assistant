@@ -69,7 +69,7 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
 
     def __init__(self, api_key: str | None = None) -> None:
         settings = get_settings()
-        self.api_key = api_key or settings.gemini_api_key or settings.llm_api_key
+        self.api_key = api_key or settings.active_api_key
         self.model = "models/gemini-embedding-001"
 
     def _embed_batch(self, batch_texts: list[str]) -> list[list[float]]:
@@ -152,7 +152,7 @@ def get_embedding_provider() -> EmbeddingProvider:
     if os.getenv("PYTEST_CURRENT_TEST") or settings.app_env == "testing":
         return FastEmbedEmbeddingProvider()
 
-    key = settings.gemini_api_key or settings.llm_api_key
-    if key and key != "CHANGE_ME":
-        return GeminiEmbeddingProvider()
+    key = settings.active_api_key
+    if key:
+        return GeminiEmbeddingProvider(api_key=key)
     return GeminiEmbeddingProvider()
