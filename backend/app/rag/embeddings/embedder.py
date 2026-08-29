@@ -65,18 +65,24 @@ class FastEmbedEmbeddingProvider(EmbeddingProvider):
 
 
 class GeminiEmbeddingProvider(EmbeddingProvider):
-    """Zero-RAM Remote API Embedding provider using Google Gemini API (Strict 0 MB RAM overhead for Render)."""
+    """Zero-RAM Remote API Embedding provider using Google Gemini API."""
 
     def __init__(self, api_key: str | None = None) -> None:
         settings = get_settings()
         self.api_key = api_key or settings.active_api_key
         self.model = "models/gemini-embedding-001"
+        self._fallback: FastEmbedEmbeddingProvider | None = None
 
-    def _embed_batch(self, batch_texts: list[str]) -> list[list[float]]:
+    def _get_fallback(self) -> FastEmbedEmbeddingProvider:
+        if self._fallback is None:
+            self._fallback = FastEmbedEmbeddingProvider()
+        return self._fallback
+
+    def _embed_batch(self, batch_texts: list[str]) -> list[list[float]] | None:
         if not batch_texts:
             return []
         if not self.api_key or self.api_key == "CHANGE_ME":
-            raise RuntimeError("GEMINI_API_KEY is not configured on Render. Please add GEMINI_API_KEY to Render Environment Variables.")
+            return None
 
         url = f"https://generativelanguage.googleapis.com/v1beta/{self.model}:batchEmbedContents"
         params = {"key": self.api_key}
@@ -91,11 +97,9 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         }
 
         max_retries = 3
-        last_error = None
-
         for attempt in range(max_retries):
             try:
-                with httpx.Client(timeout=30.0) as client:
+                with httpx.Client(timeout=15.0) as client:
                     res = client.post(url, params=params, json=payload)
                     if res.status_code == 200:
                         data = res.json()
@@ -105,11 +109,11 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
                     elif res.status_code == 429:
                         time.sleep(1.0 * (attempt + 1))
                         continue
-                    last_error = f"HTTP {res.status_code}"
             except Exception as exc:
-                last_error = sanitize_credentials(str(exc))
+                logger.warning("gemini_embedding_network_error", extra={"error": sanitize_credentials(str(exc))})
+                return None
 
-        raise RuntimeError(f"Remote Gemini Embedding API request failed ({last_error}). Please check GEMINI_API_KEY on Render.")
+        return None
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:
@@ -117,13 +121,22 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
 
         batch_size = 16
         all_embeddings: list[list[float]] = []
+        remote_failed = False
 
         for i in range(0, len(texts), batch_size):
             chunk_batch = texts[i : i + batch_size]
             batch_embeddings = self._embed_batch(chunk_batch)
-            all_embeddings.extend(batch_embeddings)
+            if batch_embeddings is not None:
+                all_embeddings.extend(batch_embeddings)
+            else:
+                remote_failed = True
+                break
 
-        return all_embeddings
+        if not remote_failed and len(all_embeddings) == len(texts):
+            return all_embeddings
+
+        logger.warning("gemini_embedding_failed_using_fastembed_fallback")
+        return self._get_fallback().embed_documents(texts)
 
     def embed_query(self, text: str) -> list[float]:
         if not text:
@@ -139,7 +152,13 @@ class HuggingFaceEmbeddingProvider(EmbeddingProvider):
         settings = get_settings()
         self.token = token or settings.active_hf_token
         self.model_name = model_name or "sentence-transformers/all-MiniLM-L6-v2"
-        self.url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{self.model_name}"
+        self.url = f"https://api-inference.huggingface.co/models/{self.model_name}"
+        self._fallback: FastEmbedEmbeddingProvider | None = None
+
+    def _get_fallback(self) -> FastEmbedEmbeddingProvider:
+        if self._fallback is None:
+            self._fallback = FastEmbedEmbeddingProvider()
+        return self._fallback
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:
@@ -151,18 +170,23 @@ class HuggingFaceEmbeddingProvider(EmbeddingProvider):
         batch_size = 16
         all_embeddings: list[list[float]] = []
 
-        for i in range(0, len(texts), batch_size):
-            chunk_batch = texts[i : i + batch_size]
-            with httpx.Client(timeout=30.0) as client:
-                res = client.post(self.url, headers=headers, json={"inputs": chunk_batch})
-                if res.status_code == 200:
-                    data = res.json()
-                    if isinstance(data, list):
-                        all_embeddings.extend(data)
-                else:
-                    raise RuntimeError(f"HuggingFace Inference API request failed ({res.status_code}). Please check HF_TOKEN on Render.")
-
-        return all_embeddings
+        try:
+            for i in range(0, len(texts), batch_size):
+                chunk_batch = texts[i : i + batch_size]
+                with httpx.Client(timeout=15.0) as client:
+                    res = client.post(self.url, headers=headers, json={"inputs": chunk_batch})
+                    if res.status_code == 200:
+                        data = res.json()
+                        if isinstance(data, list):
+                            all_embeddings.extend(data)
+                        else:
+                            raise ValueError(f"Unexpected response format from HF API: {type(data)}")
+                    else:
+                        raise RuntimeError(f"HuggingFace API HTTP {res.status_code}: {res.text[:150]}")
+            return all_embeddings
+        except Exception as exc:
+            logger.warning("hf_embedding_failed_using_fastembed_fallback", extra={"error": sanitize_credentials(str(exc))})
+            return self._get_fallback().embed_documents(texts)
 
     def embed_query(self, text: str) -> list[float]:
         if not text:
