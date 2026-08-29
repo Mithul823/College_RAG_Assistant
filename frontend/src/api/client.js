@@ -32,36 +32,45 @@ class ApiClient {
     };
 
     const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-      signal: options.signal || (typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined),
-      ...options,
-      headers,
-    });
 
-    if (response.status === 401) {
-      this.setToken(null);
+    try {
+      // 60-second timeout to allow Render Free Tier cold starts to complete
+      const response = await fetch(url, {
+        signal: options.signal || (typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(60000) : undefined),
+        ...options,
+        headers,
+      });
+
+      if (response.status === 401) {
+        this.setToken(null);
+      }
+
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+
+      if (!response.ok) {
+        const errorMsg =
+          (data && data.detail) ||
+          (data && data.message) ||
+          `Request failed with status ${response.status}`;
+        const error = new Error(errorMsg);
+        error.status = response.status;
+        error.data = data;
+        throw error;
+      }
+
+      return data;
+    } catch (err) {
+      if (err.name === 'AbortError' || err.name === 'TimeoutError' || err.message?.includes('timed out')) {
+        throw new Error('Connection timed out. Render backend may be cold-starting; please try again in a moment.');
+      }
+      throw err;
     }
-
-    let data;
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json();
-    } else {
-      data = await response.text();
-    }
-
-    if (!response.ok) {
-      const errorMsg =
-        (data && data.detail) ||
-        (data && data.message) ||
-        `Request failed with status ${response.status}`;
-      const error = new Error(errorMsg);
-      error.status = response.status;
-      error.data = data;
-      throw error;
-    }
-
-    return data;
   }
 
   // Auth endpoints
