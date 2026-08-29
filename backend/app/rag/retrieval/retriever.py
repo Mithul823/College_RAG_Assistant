@@ -48,7 +48,6 @@ class RAGRetriever:
         except (ValueError, TypeError):
             pass
         return 0.10
-
     @staticmethod
     def _compute_keyword_score(query: str, text: str) -> float:
         """Compute term frequency and phrase match bonus for exact keyword retrieval."""

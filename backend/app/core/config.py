@@ -13,7 +13,13 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_publishable_key: str = ""
     supabase_secret_key: str = ""
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    cors_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://college-rag-chat-bot.vercel.app",
+        ]
+    )
     upload_dir: str = "./data/uploads"
     chroma_persist_directory: str = "./data/chroma"
     chroma_collection_name: str = "college_documents"
@@ -46,10 +52,12 @@ class Settings(BaseSettings):
                     import json
                     parsed = json.loads(value_str)
                     if isinstance(parsed, list):
-                        return [str(o).strip() for o in parsed if str(o).strip()]
+                        return [str(o).strip().rstrip('/') for o in parsed if str(o).strip()]
                 except Exception:
                     pass
-            return [origin.strip() for origin in value_str.split(",") if origin.strip()]
+            return [origin.strip().rstrip('/') for origin in value_str.split(",") if origin.strip()]
+        if isinstance(value, list):
+            return [str(o).strip().rstrip('/') for o in value if str(o).strip()]
         return value
 
     @field_validator("database_url", mode="before")
